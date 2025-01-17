@@ -24,7 +24,7 @@ pip install -r requirements.txt
 |-- requirements.txt    # 本次实验的环境
 |-- 10214602404_李芳_实验五.pdf # 实验报告
 |-- test_result.csv  # 预测结果
-|-- P5data    # 实验数据集
+|-- P5data    # 实验数据集(已删除原始数据集，方便上传)
 ```
 
 
