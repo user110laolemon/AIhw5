@@ -1,17 +1,30 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from config import *
+import matplotlib.pyplot as plt
+
 from dataprocess import *
 from model import MultiModalModel
+from config import *
+config = Config()
 
 
-def train(args, train_dataloader, dev_dataloader):
-    model = MultiModalModel(args).to(config.device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+def train_and_test(train_dataloader, dev_dataloader, test_dataloader):
+    '''训练模型并测试模型在不同场景下的准确率'''
+    model = MultiModalModel(config).to(device=config.device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     loss_func = nn.CrossEntropyLoss()
 
-    for epoch in range(1, args.epochs + 1):
+    best_dev_loss = float('inf')
+    best_model_state = None
+    patience = config.patience
+    num_bad_epochs = 0
+    best_epoch = 0
+
+    train_losses = []
+    dev_losses = []
+
+    for epoch in range(1, config.epochs + 1):
         model.train()
         train_loss = 0.0
         train_correct = 0
@@ -19,15 +32,11 @@ def train(args, train_dataloader, dev_dataloader):
 
         for step, batch in enumerate(train_dataloader):
             ids, text, image, labels = batch
-            text = text.to(device=args.device)
-            image = image.to(device=args.device)
-            labels = labels.to(device=args.device)
+            text = text.to(device=config.device)
+            image = image.to(device=config.device)
+            labels = labels.to(device=config.device)
             optimizer.zero_grad()
-            # Forward pass
-            text_out, img_out, multi_out = model(text=text, image=image)
-            # Choose the appropriate output based on the available data
-            output = text_out if text is not None else img_out if image is not None else multi_out
-            # Calculate loss
+            output = model(text=text, image=image)
             loss = loss_func(output, labels)
             loss.backward()
             optimizer.step()
@@ -38,15 +47,43 @@ def train(args, train_dataloader, dev_dataloader):
 
         train_loss /= total_samples
         train_accuracy = train_correct / total_samples
+        train_losses.append(train_loss)
 
-        print(f"Epoch {epoch}/{args.epochs}:")
+        print(f"Epoch {epoch}/{config.epochs}:")
         print(f"  Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
 
-        evaluate(args, model, dev_dataloader, epoch)
+        dev_loss, dev_accuracy = evaluate(model, dev_dataloader, epoch)
+        dev_losses.append(dev_loss)
+
+        if dev_loss < best_dev_loss:
+            best_dev_loss = dev_loss
+            best_model_state = model.state_dict()
+            best_epoch = epoch
+            num_bad_epochs = 0
+        else:
+            num_bad_epochs += 1
+
+        if num_bad_epochs >= patience:
+            print(f"Early stopping triggered after {epoch} epochs.")
+            break
+
+    if best_model_state is not None:
+        torch.save(best_model_state, config.best_model_path)
+        print(f"Best model saved with dev loss: {best_dev_loss:.4f}")
+
+    plot_loss_curve(train_losses, dev_losses, best_epoch)
+
+    print("\nTesting the model for different scenarios:")
+    print("\nScenario: Text Input Only")
+    get_test(model, test_dataloader, scenario="text_only")
+    print("\nScenario: Image Input Only")
+    get_test(model, test_dataloader, scenario="image_only")
+    print("\nScenario: Text and Image Input")
+    get_test(model, test_dataloader, scenario="text_and_image")
 
 
-
-def evaluate(args, model, dev_dataloader, epoch=None):
+def evaluate(model, dev_dataloader, epoch=None):
+    '''评估模型在验证集上的性能'''
     model.eval()
     dev_loss = 0.0
     dev_correct = 0
@@ -56,9 +93,9 @@ def evaluate(args, model, dev_dataloader, epoch=None):
     with torch.no_grad():
         for batch in dev_dataloader:
             ids, text, image, labels = batch
-            text = text.to(device=args.device)
-            image = image.to(device=args.device)
-            labels = labels.to(device=args.device)
+            text = text.to(device=config.device)
+            image = image.to(device=config.device)
+            labels = labels.to(device=config.device)
 
             outputs = model(text=text, image=image)
             loss = loss_func(outputs, labels)
@@ -75,59 +112,18 @@ def evaluate(args, model, dev_dataloader, epoch=None):
     else:
         print(f"  Dev Loss: {dev_loss:.4f}, Dev Accuracy: {dev_accuracy:.4f}")
 
+    return dev_loss, dev_accuracy
 
-
-def train_and_test(args, train_dataloader, dev_dataloader, test_dataloader):
-    model = MultiModalModel(args).to(device=args.device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss_func = nn.CrossEntropyLoss()
-    for epoch in range(1, args.epochs + 1):
-        model.train()
-        train_loss = 0.0
-        train_correct = 0
-        total_samples = 0
-        for step, batch in enumerate(train_dataloader):
-          ids, text, image, labels = batch
-          text = text.to(device=args.device)
-          image = image.to(device=args.device)
-          labels = labels.to(device=args.device)
-          optimizer.zero_grad()
-          output = model(text=text, image=image)
-          loss = loss_func(output, labels)
-          loss.backward()
-          optimizer.step()
-
-          train_loss += loss.item() * labels.size(0)
-          train_correct += torch.sum(torch.argmax(output, dim=1) == labels).item()
-          total_samples += labels.size(0)
-
-        train_loss /= total_samples
-        train_accuracy = train_correct / total_samples
-
-        print(f"Epoch {epoch}/{args.epochs}:")
-        print(f"  Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
-
-        evaluate(args, model, dev_dataloader, epoch)
-
-
-    print("\nTesting the model for different scenarios:")
-    print("\nScenario: Text Input Only")
-    get_test(args, model, test_dataloader, scenario="text_only")
-    print("\nScenario: Image Input Only")
-    get_test(args, model, test_dataloader, scenario="image_only")
-    print("\nScenario: Text and Image Input")
-    get_test(args, model, test_dataloader, scenario="text_and_image")
-
-
-def get_test(args, model, test_dataloader, scenario=""):
+def get_test(model, test_dataloader, scenario=""):
+    '''测试模型在不同场景下的准确率'''
     model.eval()
     predictions = []
 
     with torch.no_grad():
         for batch in test_dataloader:
             ids, text, image, _ = batch
-            text = text.to(device=args.device)
-            image = image.to(device=args.device)
+            text = text.to(device=config.device)
+            image = image.to(device=config.device)
 
             outputs = model(text=text, image=image)
             predicted_labels = torch.argmax(outputs, dim=1)
@@ -141,12 +137,13 @@ def get_test(args, model, test_dataloader, scenario=""):
                 }
                 predictions.append(prediction)
 
-    save_data(args.test_output_file, predictions)
+    save_data(config.test_output_file + f'_{scenario}.txt', predictions)
 
     accuracy = calculate_accuracy(predictions, test_dataloader.dataset.data)
     print(f"  {scenario.capitalize()} Test Accuracy: {accuracy:.4f}")
 
 def calculate_accuracy(predictions, data):
+    '''计算预测的准确率'''
     correct_predictions = 0
     total_samples = len(predictions)
 
@@ -162,8 +159,21 @@ def calculate_accuracy(predictions, data):
     return accuracy
 
 
+def plot_loss_curve(train_losses, dev_losses, best_epoch, save_path=config.save_plt_path):
+    """绘制训练和评估损失曲线图，并标注最佳模型的 epoch"""
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_losses, label='Train Loss')
+    plt.plot(dev_losses, label='Dev Loss')
+    plt.axvline(x=best_epoch, color='r', linestyle='--', label='Best Model')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Evaluation Loss')
+    plt.legend()
+    plt.savefig(save_path)
+    plt.show()
+
+
 if __name__ == '__main__':
-    config = Config()
     print(f'Device: {config.device}')
 
     train_set, dev_set = load_data(config)
@@ -175,3 +185,4 @@ if __name__ == '__main__':
         test_set, _ = load_data(config)
         test_dataloader = DataLoader(test_set, shuffle=False, batch_size=config.batch_size)
         train_and_test(config, train_dataloader, dev_dataloader, test_dataloader)
+        print('训练完成.')

@@ -3,9 +3,9 @@ from torch import nn
 from torchvision.models import convnext
 from transformers import RobertaModel
 
-from config import *
 from dataprocess import *
-
+from config import *
+config = Config()
 
 class TextOnly(nn.Module):
     def __init__(self, args):
@@ -96,28 +96,21 @@ class MultiModalModel(nn.Module):
 
         _, text_out = self.TextModule_(text)
         img_out = self.ImgModule_(image)
-
         multi_out = torch.cat((text_out, img_out), 1)
-
         text_out = self.classifier_text(text_out)
         img_out = self.classifier_img(img_out)
         multi_out = self.classifier_multi(multi_out)
-
-        # Return only one output tensor based on available data
         return text_out if text is not None else img_out if image is not None else multi_out
 
 
     def Multihead_self_attention(self, text_out, img_out):
-
         text_k1 = self.linear_text_k1(text_out)
         text_v1 = self.linear_text_v1(text_out)
         img_k2 = self.linear_img_k2(img_out)
         img_v2 = self.linear_img_v2(img_out)
-
         key = torch.stack((text_k1, img_k2), dim=1)
         value = torch.stack((text_v1, img_v2), dim=1)
         query = torch.stack((text_out, img_out), dim=1)
-
         attn_output, attn_output_weights = self.multihead_attn(query, key, value)
         return attn_output
 

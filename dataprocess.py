@@ -12,24 +12,15 @@ from transformers import RobertaTokenizer
 from PIL import Image
 
 from config import *
-
+config = Config()
 
 class MyDataset(Dataset):
-    def __init__(self, args, data, transform=None):
-        self.args = args
+    def __init__(self, data, transform=None):
         self.data = data
         self.transform = transform
-        self.tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_model)
-        self.label_dict_number = {
-            'negative': 0,
-            'neutral': 1,
-            'positive': 2,
-        }
-        self.label_dict_str = {
-            0: 'negative',
-            1: 'neutral',
-            2: 'positive',
-        }
+        self.tokenizer = RobertaTokenizer.from_pretrained(config.load_model_path)
+        self.label_dict_number = config.label_dict_number
+        self.label_dict_str = config.label_dict_str
 
     def __getitem__(self, index):
         return self.tokenize(self.data[index])
@@ -43,7 +34,7 @@ class MyDataset(Dataset):
         image_path = item['image_path']
         label = item['label']
 
-        text_token = self.tokenizer(text, return_tensors="pt", max_length=self.args.text_size,
+        text_token = self.tokenizer(text, return_tensors="pt", max_length=self.config.text_size,
                                     padding='max_length', truncation=True)
         text_token['input_ids'] = text_token['input_ids'].squeeze()
         text_token['attention_mask'] = text_token['attention_mask'].squeeze()
@@ -82,9 +73,9 @@ def load_data(config):
         'test': config.test_file and load_json(config.test_file),
     }
     data_set = {
-        'train': MyDataset(config, data_list['train'], transform=data_transform),
-        'dev': MyDataset(config, data_list['dev'], transform=data_transform),
-        'test': config.test_file and MyDataset(config, data_list['test'], transform=data_transform),
+        'train': MyDataset(data_list['train'], transform=data_transform),
+        'dev': MyDataset(data_list['dev'], transform=data_transform),
+        'test': config.test_file and MyDataset(data_list['test'], transform=data_transform),
     }
 
     return data_set[config.mode], data_set['dev']
@@ -138,8 +129,6 @@ def transform_data(data_values, data_path):
 
 
 if __name__ == '__main__':
-    config = Config()
-
     train_dev_df = pd.read_csv(config.train_txt_path)
     test_df = pd.read_csv(config.test_txt_path)
     train_df, dev_df = train_test_split(train_dev_df, test_size=config.dev_size)

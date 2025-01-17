@@ -30,17 +30,16 @@ pip install -r requirements.txt
 
 ## Usage
 
-在终端中输入（按顺序）
+在终端中输入
 
 ```shell
-python deal_data.py
-python multi.py
+python dataprocess.py
+python train_evaluate.py
 ```
 实验的所有内容都需要放于同一目录下，运行时间比较长，建议使用云GPU服务器！
 
-ROBERTA模型需要下载Huggingface中的资源，如果本地网络连接不佳建议使用colab的GPU运行代码进行训练（GPU可能出现out of memory问题）。
+注：ROBERTA模型需要下载Huggingface中的资源，注意联网需求。
 
-data文件夹必须保留，dataset文件夹可根据deal_data运行得出。
 
 ## Reference
 
