@@ -18,7 +18,7 @@ class MyDataset(Dataset):
     def __init__(self, data, transform=None):
         self.data = data
         self.transform = transform
-        self.tokenizer = RobertaTokenizer.from_pretrained(config.load_model_path)
+        self.tokenizer = RobertaTokenizer.from_pretrained(config.pretrained_model)
         self.label_dict_number = config.label_dict_number
         self.label_dict_str = config.label_dict_str
 

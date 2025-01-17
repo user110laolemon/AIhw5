@@ -160,7 +160,7 @@ def calculate_accuracy(predictions, data):
     return accuracy
 
 
-def plot_loss_curve(train_losses, dev_losses, best_epoch, save_path=config.save_plt_path):
+def plot_loss_curve(train_losses, dev_losses, best_epoch, save_path=config.plt_path):
     """绘制训练和评估损失曲线图，并标注最佳模型的 epoch"""
     plt.figure(figsize=(10, 5))
     plt.plot(train_losses, label='Train Loss')
@@ -170,7 +170,7 @@ def plot_loss_curve(train_losses, dev_losses, best_epoch, save_path=config.save_
     plt.ylabel('Loss')
     plt.title('Training and Evaluation Loss')
     plt.legend()
-    plt.savefig(save_path)
+    plt.savefig(save_path + f'/loss_curve_{config.lr}_{config.dropout}.png')
     plt.show()
 
 
