@@ -68,11 +68,12 @@ def train_and_test(train_dataloader, dev_dataloader, test_dataloader):
             break
 
     if best_model_state is not None:
-        torch.save(best_model_state, config.best_model_path)
+        torch.save(best_model_state, config.model_path + f'/model_{config.lr}_{config.dropout}.pt')
         print(f"Best model saved with dev loss: {best_dev_loss:.4f}")
 
     plot_loss_curve(train_losses, dev_losses, best_epoch)
 
+    model = model.load_state_dict(best_model_state)
     print("\nTesting the model for different scenarios:")
     print("\nScenario: Text Input Only")
     get_test(model, test_dataloader, scenario="text_only")
@@ -137,7 +138,7 @@ def get_test(model, test_dataloader, scenario=""):
                 }
                 predictions.append(prediction)
 
-    save_data(config.test_output_file + f'_{scenario}.txt', predictions)
+    save_data(config.test_output_file + f'/test_result_{config.lr}_{config.dropout}_{scenario}.txt', predictions)
 
     accuracy = calculate_accuracy(predictions, test_dataloader.dataset.data)
     print(f"  {scenario.capitalize()} Test Accuracy: {accuracy:.4f}")

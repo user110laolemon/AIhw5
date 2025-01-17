@@ -27,7 +27,6 @@ class Config:
         self.pretrained_model = 'roberta-base'
 
         self.mode = 'train'
-        self.test_output_file = f'./test_result_{self.lr}_{self.dropout}'
-        self.save_model_path = f'./model_{self.lr}_{self.dropout}.pth'
-        self.load_model_path = f'./model_{self.lr}_{self.dropout}.pth'
-        self.save_plt_path = f'./loss_{self.lr}_{self.dropout}.png'
+        self.test_output_file = './test_results'
+        self.model_path = './pretrained_models'
+        self.plt_path = './loss_curves'
