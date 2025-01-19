@@ -34,7 +34,7 @@ class MyDataset(Dataset):
         image_path = item['image_path']
         label = item['label']
 
-        text_token = self.tokenizer(text, return_tensors="pt", max_length=self.config.text_size,
+        text_token = self.tokenizer(text, return_tensors="pt", max_length=config.text_size,
                                     padding='max_length', truncation=True)
         text_token['input_ids'] = text_token['input_ids'].squeeze()
         text_token['attention_mask'] = text_token['attention_mask'].squeeze()

@@ -9,7 +9,7 @@ from config import *
 config = Config()
 
 
-def train_and_test(train_dataloader, dev_dataloader, test_dataloader):
+def train_and_test(train_dataloader, dev_dataloader):
     '''训练模型并测试模型在不同场景下的准确率'''
     model = MultiModalModel(config).to(device=config.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
@@ -70,17 +70,7 @@ def train_and_test(train_dataloader, dev_dataloader, test_dataloader):
     if best_model_state is not None:
         torch.save(best_model_state, config.model_path + f'/model_{config.lr}_{config.dropout}.pt')
         print(f"Best model saved with dev loss: {best_dev_loss:.4f}")
-
     plot_loss_curve(train_losses, dev_losses, best_epoch)
-
-    model = model.load_state_dict(best_model_state)
-    print("\nTesting the model for different scenarios:")
-    print("\nScenario: Text Input Only")
-    get_test(model, test_dataloader, scenario="text_only")
-    print("\nScenario: Image Input Only")
-    get_test(model, test_dataloader, scenario="image_only")
-    print("\nScenario: Text and Image Input")
-    get_test(model, test_dataloader, scenario="text_and_image")
 
 
 def evaluate(model, dev_dataloader, epoch=None):
@@ -183,7 +173,21 @@ if __name__ == '__main__':
 
     if config.do_train:
         print('训练中...')
+        train_and_test(train_dataloader, dev_dataloader)
+        print('训练完成.')
+    elif config.do_test:
+        print('预测中...')
         test_set, _ = load_data(config)
         test_dataloader = DataLoader(test_set, shuffle=False, batch_size=config.batch_size)
-        train_and_test(config, train_dataloader, dev_dataloader, test_dataloader)
-        print('训练完成.')
+        model = MultiModalModel(config).to(device=config.device)
+        model.load_state_dict(torch.load(config.model_path + f'/model_{config.lr}_{config.dropout}.pt'))
+        model.to(config.device)
+        
+        print("\nTesting the model for different scenarios:")
+        print("\nScenario: Text Input Only")
+        get_test(model, test_dataloader, scenario="text_only")
+        print("\nScenario: Image Input Only")
+        get_test(model, test_dataloader, scenario="image_only")
+        print("\nScenario: Text and Image Input")
+        get_test(model, test_dataloader, scenario="text_and_image")
+        print('预测完成.')

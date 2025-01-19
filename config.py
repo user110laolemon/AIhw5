@@ -6,9 +6,9 @@ class Config:
         self.do_train = True
         self.do_test = True
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.lr = 1e-6
+        self.lr = 1e-8
         self.dropout = 0.1
-        self.epochs = 10
+        self.epochs = 300
         self.batch_size = 4
         self.img_size = 384
         self.text_size = 64
