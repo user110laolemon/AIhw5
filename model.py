@@ -7,9 +7,13 @@ from dataprocess import *
 from config import *
 config = Config()
 
-class TextOnly(nn.Module):
+class TEXTRobertaModel(nn.Module):
+    '''文本模型'''
     def __init__(self, args):
-        super(TextOnly, self).__init__()
+        '''初始化文本模型
+            设置RoBERTa模型和全连接层
+        '''
+        super(TEXTRobertaModel, self).__init__()
         self.encoder = RobertaModel.from_pretrained(args.pretrained_model)
         for param in self.encoder.parameters():
             param.requires_grad = True
@@ -19,6 +23,7 @@ class TextOnly(nn.Module):
         )
 
     def forward(self, encoded_input):
+        '''前向传播'''
         encoder_output = self.encoder(**encoded_input)
         hidden_state = encoder_output['last_hidden_state']
         pooler_output = encoder_output['pooler_output']
@@ -26,23 +31,32 @@ class TextOnly(nn.Module):
         return hidden_state, output
 
 
-class ImgOnly(nn.Module):
+class IMGConvnextModel(nn.Module):
+    '''图像模型'''
     def __init__(self, args):
-        super(ImgOnly, self).__init__()
+        '''初始化图像模型
+            设置ConvNeXt模型
+        '''
+        super(IMGConvnextModel, self).__init__()
         self.encoder = convnext.convnext_base(weights=convnext.ConvNeXt_Base_Weights.DEFAULT)
         for param in self.encoder.parameters():
             param.requires_grad = True
 
     def forward(self, x):
+        '''前向传播'''
         x = self.encoder(x)
         return x
 
 
 class MultiModalModel(nn.Module):
+    '''多模态模型'''
     def __init__(self, args):
+        '''初始化多模态模型
+            设置文本模型、图像模型、多头注意力机制、Transformer编码器和分类器
+        '''
         super(MultiModalModel, self).__init__()
-        self.TextModule_ = TextOnly(args)
-        self.ImgModule_ = ImgOnly(args)
+        self.TextModule_ = TEXTRobertaModel(args)
+        self.ImgModule_ = IMGConvnextModel(args)
 
         self.multihead_attn = nn.MultiheadAttention(embed_dim=1000, num_heads=2, batch_first=True)
         self.linear_text_k1 = nn.Linear(1000, 1000)
@@ -84,6 +98,10 @@ class MultiModalModel(nn.Module):
         )
 
     def forward(self, text=None, image=None):
+        '''前向传播
+            判断输入类型，转发文本和图像输出
+            返回文本、图像或多模态的输出
+        '''
         if text is not None and image is None:
             _, text_out = self.TextModule_(text)
             text_out = self.classifier_text(text_out)
@@ -104,6 +122,10 @@ class MultiModalModel(nn.Module):
 
 
     def Multihead_self_attention(self, text_out, img_out):
+        '''多头自注意力机制
+            转发文本和图像输出
+            返回注意力输出
+        '''
         text_k1 = self.linear_text_k1(text_out)
         text_v1 = self.linear_text_v1(text_out)
         img_k2 = self.linear_img_k2(img_out)
@@ -115,5 +137,9 @@ class MultiModalModel(nn.Module):
         return attn_output
 
     def Transformer_Encoder(self, text_out, img_out):
+        '''Transformer编码器
+            转发文本和图像输出
+            返回编码输出
+        '''
         multimodal_sequence = torch.stack((text_out, img_out), dim=1)
         return self.transformer_encoder(multimodal_sequence)

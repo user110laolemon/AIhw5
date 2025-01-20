@@ -15,7 +15,9 @@ from config import *
 config = Config()
 
 class MyDataset(Dataset):
+    '''数据集'''
     def __init__(self, data, transform=None):
+        '''初始化数据集'''
         self.data = data
         self.transform = transform
         self.tokenizer = RobertaTokenizer.from_pretrained(config.pretrained_model)
@@ -23,12 +25,15 @@ class MyDataset(Dataset):
         self.label_dict_str = config.label_dict_str
 
     def __getitem__(self, index):
+        '''获取数据'''
         return self.tokenize(self.data[index])
 
     def __len__(self):
+        '''获取数据集长度'''
         return len(self.data)
 
     def tokenize(self, item):
+        '''数据编码'''
         item_id = item['id']
         text = item['text']
         image_path = item['image_path']
@@ -46,6 +51,7 @@ class MyDataset(Dataset):
 
 
 def load_json(file):
+    '''加载json文件'''
     data_list = []
     with open(file, 'r', encoding='utf-8') as f:
         lines = json.load(f)
@@ -61,6 +67,7 @@ def load_json(file):
 
 
 def load_data(config):
+    '''加载数据'''
     img_size = (config.img_size, config.img_size)
     data_transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -82,6 +89,7 @@ def load_data(config):
 
 
 def save_data(file, predict_list):
+    '''保存数据'''
     with open(file, 'w', encoding='utf-8') as f:
         f.write('guid,tag\n')
         for pred in predict_list:
@@ -89,6 +97,7 @@ def save_data(file, predict_list):
 
 
 def read_text_file(file, encoding):
+    '''读取文本文件'''
     text = ''
     with open(file, encoding=encoding) as fp:
         for line in fp.readlines():
@@ -98,6 +107,7 @@ def read_text_file(file, encoding):
 
 
 def transform_data(data_values, data_path):
+    '''转换数据'''
     dataset = []
     for i in range(len(data_values)):
         guid = str(int(data_values[i][0]))

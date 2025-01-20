@@ -10,7 +10,11 @@ config = Config()
 
 
 def train_and_test(train_dataloader, dev_dataloader):
-    '''训练模型并测试模型在不同场景下的准确率'''
+    '''训练模型并在验证集上评估性能
+        初始化模型、优化器和损失函数
+        训练模型并在验证集上评估性能
+        使用早停法保存最佳模型并绘制损失曲线图
+    '''
     model = MultiModalModel(config).to(device=config.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     loss_func = nn.CrossEntropyLoss()
@@ -74,7 +78,10 @@ def train_and_test(train_dataloader, dev_dataloader):
 
 
 def evaluate(model, dev_dataloader, epoch=None):
-    '''评估模型在验证集上的性能'''
+    '''评估模型在验证集上的性能
+        计算模型在验证集上的损失和准确率
+        返回验证集上的损失和准确率
+    '''
     model.eval()
     dev_loss = 0.0
     dev_correct = 0
@@ -106,7 +113,10 @@ def evaluate(model, dev_dataloader, epoch=None):
     return dev_loss, dev_accuracy
 
 def get_test(model, test_dataloader, scenario=""):
-    '''测试模型在不同场景下的准确率'''
+    '''测试模型在不同场景下的准确率
+        计算模型在测试集上的准确率
+        保存测试结果打印测试准确率
+    '''
     model.eval()
     predictions = []
 
@@ -116,7 +126,15 @@ def get_test(model, test_dataloader, scenario=""):
             text = text.to(device=config.device)
             image = image.to(device=config.device)
 
-            outputs = model(text=text, image=image)
+            if scenario == "text_only":
+                outputs = model(text=text, image=None)
+            elif scenario == "image_only":
+                outputs = model(text=None, image=image)
+            elif scenario == "text_and_image":
+                outputs = model(text=text, image=image)
+            else:
+                raise ValueError(f"Unknown scenario: {scenario}")
+
             predicted_labels = torch.argmax(outputs, dim=1)
 
             for i in range(len(ids)):
@@ -151,7 +169,11 @@ def calculate_accuracy(predictions, data):
 
 
 def plot_loss_curve(train_losses, dev_losses, best_epoch, save_path=config.plt_path):
-    """绘制训练和评估损失曲线图，并标注最佳模型的 epoch"""
+    '''绘制训练和评估损失曲线图
+        在最佳模型处绘制红色虚线
+        保存损失曲线图
+        显示损失曲线图
+    '''
     plt.figure(figsize=(10, 5))
     plt.plot(train_losses, label='Train Loss')
     plt.plot(dev_losses, label='Dev Loss')
